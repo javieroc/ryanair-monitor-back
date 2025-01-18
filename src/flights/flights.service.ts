@@ -4,9 +4,11 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { HttpService } from '@nestjs/axios';
+import { StatsResponseDto } from './dto/stats-response.dto';
 import { PaginationDto } from 'src/dto/pagination.dto';
 import { FindAllResponse } from 'src/dto/response.dto';
 import { Flight } from './schemas/flight.schema';
+import { QueryDto } from './dto/query.dto';
 
 @Injectable()
 export class FlightsService {
@@ -42,6 +44,42 @@ export class FlightsService {
       data,
       total,
     };
+  }
+
+  async getStats({ date }: QueryDto): Promise<StatsResponseDto> {
+    try {
+      const flightsTotal = await this.flightModel.countDocuments().exec();
+      const cancelled = await this.flightModel.countDocuments({
+        flight_status: 'cancelled',
+      }).exec();
+
+      const delayedMoreThan45Min = await this.flightModel.countDocuments({
+        'departure.delay': { $gt: 45 },
+      }).exec();
+
+      const delayedBetween30And45Min = await this.flightModel.countDocuments({
+        'departure.delay': { $gt: 30, $lte: 45 },
+      }).exec();
+
+      const delayedBetween15And30Min = await this.flightModel.countDocuments({
+        'departure.delay': { $gt: 15, $lte: 30 },
+      }).exec();
+
+      const delayedBetween0And15Min = await this.flightModel.countDocuments({
+        'departure.delay': { $gt: 0, $lte: 15 },
+      }).exec();
+
+      return {
+        flightsTotal,
+        cancelled,
+        delayedMoreThan45Min,
+        delayedBetween30And45Min,
+        delayedBetween15And30Min,
+        delayedBetween0And15Min,
+      };
+    } catch (error) {
+      this.logger.error(`Error counting flights: ${error.message}`);
+    }
   }
 
   @Cron(CronExpression.EVERY_30_MINUTES)
