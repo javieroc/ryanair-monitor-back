@@ -1,8 +1,8 @@
 import { Controller, Get, Post, Body, Query } from '@nestjs/common';
-import { PaginationDto } from 'src/dto/pagination.dto';
 import { CreateFlightDto } from './dto/create-flight.dto';
+import { QueryParamsDto } from './dto/query-params.dto';
 import { FlightsService } from './flights.service';
-import { QueryDto } from './dto/query.dto';
+import { QueryStatsDto } from './dto/query-stats.dto';
 
 @Controller('flights')
 export class FlightsController {
@@ -14,12 +14,12 @@ export class FlightsController {
   }
 
   @Get()
-  findAll(@Query() paginationDto: PaginationDto) {
-    return this.flightsService.findAll(paginationDto);
+  findAll(@Query() paramsDto: QueryParamsDto) {
+    return this.flightsService.findAll(paramsDto);
   }
 
   @Get('stats')
-  getStats(@Query() queryParamsDto: QueryDto) {
+  getStats(@Query() queryParamsDto: QueryStatsDto) {
     return this.flightsService.getStats(queryParamsDto);
   }
 }

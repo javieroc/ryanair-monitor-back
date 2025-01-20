@@ -11,7 +11,7 @@ import { AppService } from './app.service';
     ConfigModule.forRoot(),
     MongooseModule.forRoot(process.env.DB_URI),
     ScheduleModule.forRoot(),
-    FlightsModule
+    FlightsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

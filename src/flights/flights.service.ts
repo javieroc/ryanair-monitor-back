@@ -6,10 +6,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { HttpService } from '@nestjs/axios';
 import { StatsResponseDto } from './dto/stats-response.dto';
-import { PaginationDto } from 'src/dto/pagination.dto';
 import { FindAllResponse } from 'src/dto/response.dto';
 import { Flight } from './schemas/flight.schema';
-import { QueryDto } from './dto/query.dto';
+import { QueryStatsDto } from './dto/query-stats.dto';
+import { QueryParamsDto } from './dto/query-params.dto';
 
 @Injectable()
 export class FlightsService {
@@ -24,38 +24,48 @@ export class FlightsService {
   ) {}
 
   async create(createFlightDto: any): Promise<Flight> {
-    const existingFlight = await this.flightModel.findOne({ 'flight.number': createFlightDto.flight.number }).exec();
+    const existingFlight = await this.flightModel
+      .findOne({ 'flight.number': createFlightDto.flight.number })
+      .exec();
 
     if (existingFlight) {
-      this.logger.warn(`Flight with number ${createFlightDto.flight.number} already exists. Skipping.`);
+      this.logger.warn(
+        `Flight with number ${createFlightDto.flight.number} already exists. Skipping.`,
+      );
       return existingFlight;
     }
-  
+
     const flight = new this.flightModel(createFlightDto);
     return flight.save();
   }
 
-  async findAll(
-    { limit = 10, offset = 0, flightDate }: PaginationDto & QueryDto,
-  ): Promise<FindAllResponse<Flight>> {
-
-    const matchCondition: any = {}
+  async findAll({
+    limit,
+    offset,
+    flightDate,
+  }: QueryParamsDto): Promise<FindAllResponse<Flight>> {
+    const matchCondition: any = {};
     matchCondition.flight_date = flightDate ?? format(new Date(), 'yyyy-MM-dd');
 
     const total = await this.flightModel.countDocuments(matchCondition).exec();
-    const data = await this.flightModel.aggregate([
-      { $match: matchCondition },
-      {
-        $addFields: {
-          sortPriority: {
-            $cond: { if: { $eq: ['$flight_status', 'cancelled'] }, then: 0, else: 1 },
+    const data = await this.flightModel
+      .aggregate([
+        { $match: matchCondition },
+        {
+          $addFields: {
+            sortPriority: {
+              $cond: {
+                if: { $eq: ['$flight_status', 'cancelled'] },
+                then: 0,
+                else: 1,
+              },
+            },
           },
         },
-      },
-      { $sort: { sortPriority: 1, 'departure.delay': -1 } },
-      // { $skip: offset },
-      // { $limit: limit },
-    ]).exec();
+        { $sort: { sortPriority: 1, 'departure.delay': -1 } },
+        ...(offset !== undefined ? [{ $skip: offset }, { $limit: limit }] : []),
+      ])
+      .exec();
 
     return {
       data,
@@ -63,36 +73,48 @@ export class FlightsService {
     };
   }
 
-  async getStats({ flightDate }: QueryDto): Promise<StatsResponseDto> {
-    const matchCondition: any = {}
+  async getStats({ flightDate }: QueryStatsDto): Promise<StatsResponseDto> {
+    const matchCondition: any = {};
     matchCondition.flight_date = flightDate ?? format(new Date(), 'yyyy-MM-dd');
 
     try {
-      const flightsTotal = await this.flightModel.countDocuments(matchCondition).exec();
-      const cancelled = await this.flightModel.countDocuments({
-        flight_status: 'cancelled',
-        ...matchCondition,
-      }).exec();
+      const flightsTotal = await this.flightModel
+        .countDocuments(matchCondition)
+        .exec();
+      const cancelled = await this.flightModel
+        .countDocuments({
+          flight_status: 'cancelled',
+          ...matchCondition,
+        })
+        .exec();
 
-      const delayedMoreThan45Min = await this.flightModel.countDocuments({
-        'departure.delay': { $gt: 45 },
-        ...matchCondition,
-      }).exec();
+      const delayedMoreThan45Min = await this.flightModel
+        .countDocuments({
+          'departure.delay': { $gt: 45 },
+          ...matchCondition,
+        })
+        .exec();
 
-      const delayedBetween30And45Min = await this.flightModel.countDocuments({
-        'departure.delay': { $gt: 30, $lte: 45 },
-        ...matchCondition,
-      }).exec();
+      const delayedBetween30And45Min = await this.flightModel
+        .countDocuments({
+          'departure.delay': { $gt: 30, $lte: 45 },
+          ...matchCondition,
+        })
+        .exec();
 
-      const delayedBetween15And30Min = await this.flightModel.countDocuments({
-        'departure.delay': { $gt: 15, $lte: 30 },
-        ...matchCondition,
-      }).exec();
+      const delayedBetween15And30Min = await this.flightModel
+        .countDocuments({
+          'departure.delay': { $gt: 15, $lte: 30 },
+          ...matchCondition,
+        })
+        .exec();
 
-      const delayedBetween0And15Min = await this.flightModel.countDocuments({
-        'departure.delay': { $gte: 0, $lte: 15 },
-        ...matchCondition,
-      }).exec();
+      const delayedBetween0And15Min = await this.flightModel
+        .countDocuments({
+          'departure.delay': { $gte: 0, $lte: 15 },
+          ...matchCondition,
+        })
+        .exec();
 
       return {
         flightsTotal,
@@ -116,7 +138,6 @@ export class FlightsService {
       this.logger.error('Error fetching flight data', error.message);
     }
   }
-
 
   private async fetchFlights(): Promise<void> {
     const limit = 100;
@@ -152,15 +173,20 @@ export class FlightsService {
   }
 
   private async processFlightData(flights: any[]): Promise<void> {
-    await flights.reduce(async (prev, flight) => {
-      try {
-        await prev;
-        this.logger.debug(`Processing flight: ${JSON.stringify(flight)}`);
+    await flights.reduce(
+      async (prev, flight) => {
+        try {
+          await prev;
+          this.logger.debug(`Processing flight: ${JSON.stringify(flight)}`);
 
-        return this.create(flight);
-      } catch (err) {
-        this.logger.log(`Error saving the flight register into MongoDB: ${JSON.stringify(err)}`);
-      }
-    }, Promise.resolve({}) as Promise<Flight>);
+          return this.create(flight);
+        } catch (err) {
+          this.logger.log(
+            `Error saving the flight register into MongoDB: ${JSON.stringify(err)}`,
+          );
+        }
+      },
+      Promise.resolve({}) as Promise<Flight>,
+    );
   }
 }

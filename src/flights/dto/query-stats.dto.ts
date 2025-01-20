@@ -1,6 +1,6 @@
 import { IsOptional, IsString } from 'class-validator';
 
-export class QueryDto {
+export class QueryStatsDto {
   @IsOptional()
   @IsString()
   flightDate?: string;
