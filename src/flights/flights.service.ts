@@ -129,6 +129,52 @@ export class FlightsService {
     }
   }
 
+  async getFlightWithHighestDelay({
+    flightDate,
+  }: QueryStatsDto): Promise<Flight> {
+    try {
+      const flightWithHighestDelay = await this.flightModel
+        .findOne({
+          flight_date: flightDate ?? format(new Date(), 'yyyy-MM-dd'),
+        })
+        .sort({ 'departure.delay': -1 })
+        .exec();
+      return flightWithHighestDelay;
+    } catch (error) {
+      this.logger.error(
+        `Error fetching flight with highest delay: ${error.message}`,
+      );
+    }
+  }
+
+  async getAverageDelay({
+    flightDate,
+  }: QueryStatsDto): Promise<{ averageDelay: number }> {
+    try {
+      const result = await this.flightModel
+        .aggregate([
+          {
+            $match: {
+              flight_date: flightDate ?? format(new Date(), 'yyyy-MM-dd'),
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              averageDelay: { $avg: '$departure.delay' },
+            },
+          },
+        ])
+        .exec();
+      return {
+        averageDelay:
+          result.length > 0 ? Math.round(result[0].averageDelay) : 0,
+      };
+    } catch (error) {
+      this.logger.error(`Error calculating average delay: ${error.message}`);
+    }
+  }
+
   @Cron(CronExpression.EVERY_10_HOURS)
   async updateFlightsData() {
     this.logger.log('Started fetching flight data...');

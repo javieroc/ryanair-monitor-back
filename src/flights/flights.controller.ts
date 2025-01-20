@@ -22,4 +22,14 @@ export class FlightsController {
   getStats(@Query() queryParamsDto: QueryStatsDto) {
     return this.flightsService.getStats(queryParamsDto);
   }
+
+  @Get('highest-delay')
+  getMostDelayed(@Query() queryParamsDto: QueryStatsDto) {
+    return this.flightsService.getFlightWithHighestDelay(queryParamsDto);
+  }
+
+  @Get('average-delay')
+  getAverageDelay(@Query() queryParamsDto: QueryStatsDto) {
+    return this.flightsService.getAverageDelay(queryParamsDto);
+  }
 }
