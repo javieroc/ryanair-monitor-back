@@ -1,0 +1,13 @@
+k8s
+Dockerfile
+test
+README.md
+Jenkinsfile
+.git
+.gitignore
+.dockerignore
+nodemon.json
+package-lock.json
+node_modules
+dist
+/data*

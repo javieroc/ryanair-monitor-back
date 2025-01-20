@@ -1,4 +1,5 @@
 import { lastValueFrom } from 'rxjs';
+import { format } from 'date-fns';
 import { Model } from 'mongoose';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Injectable, Logger } from '@nestjs/common';
@@ -14,7 +15,7 @@ import { QueryDto } from './dto/query.dto';
 export class FlightsService {
   private readonly logger = new Logger(FlightsService.name);
   private readonly apiUrl = 'https://api.aviationstack.com/v1/flights';
-  private readonly accessKey = '70270f49cd2f7ec7cf10dfe0175df6a5';
+  private readonly accessKey = '731cbdbc3b2747fdc8ca7329374bfd59';
   private readonly airlineName = 'RYANAIR';
 
   constructor(
@@ -35,10 +36,26 @@ export class FlightsService {
   }
 
   async findAll(
-    { limit = 10, offset = 0 }: PaginationDto,
+    { limit = 10, offset = 0, flightDate }: PaginationDto & QueryDto,
   ): Promise<FindAllResponse<Flight>> {
-    const total = await this.flightModel.countDocuments().exec();
-    const data = await this.flightModel.find().limit(limit).skip(offset).exec();
+
+    const matchCondition: any = {}
+    matchCondition.flight_date = flightDate ?? format(new Date(), 'yyyy-MM-dd');
+
+    const total = await this.flightModel.countDocuments(matchCondition).exec();
+    const data = await this.flightModel.aggregate([
+      { $match: matchCondition },
+      {
+        $addFields: {
+          sortPriority: {
+            $cond: { if: { $eq: ['$flight_status', 'cancelled'] }, then: 0, else: 1 },
+          },
+        },
+      },
+      { $sort: { sortPriority: 1, 'departure.delay': -1 } },
+      // { $skip: offset },
+      // { $limit: limit },
+    ]).exec();
 
     return {
       data,
@@ -46,27 +63,35 @@ export class FlightsService {
     };
   }
 
-  async getStats({ date }: QueryDto): Promise<StatsResponseDto> {
+  async getStats({ flightDate }: QueryDto): Promise<StatsResponseDto> {
+    const matchCondition: any = {}
+    matchCondition.flight_date = flightDate ?? format(new Date(), 'yyyy-MM-dd');
+
     try {
-      const flightsTotal = await this.flightModel.countDocuments().exec();
+      const flightsTotal = await this.flightModel.countDocuments(matchCondition).exec();
       const cancelled = await this.flightModel.countDocuments({
         flight_status: 'cancelled',
+        ...matchCondition,
       }).exec();
 
       const delayedMoreThan45Min = await this.flightModel.countDocuments({
         'departure.delay': { $gt: 45 },
+        ...matchCondition,
       }).exec();
 
       const delayedBetween30And45Min = await this.flightModel.countDocuments({
         'departure.delay': { $gt: 30, $lte: 45 },
+        ...matchCondition,
       }).exec();
 
       const delayedBetween15And30Min = await this.flightModel.countDocuments({
         'departure.delay': { $gt: 15, $lte: 30 },
+        ...matchCondition,
       }).exec();
 
       const delayedBetween0And15Min = await this.flightModel.countDocuments({
-        'departure.delay': { $gt: 0, $lte: 15 },
+        'departure.delay': { $gte: 0, $lte: 15 },
+        ...matchCondition,
       }).exec();
 
       return {
@@ -82,7 +107,7 @@ export class FlightsService {
     }
   }
 
-  @Cron(CronExpression.EVERY_30_MINUTES)
+  @Cron(CronExpression.EVERY_10_HOURS)
   async updateFlightsData() {
     this.logger.log('Started fetching flight data...');
     try {
@@ -96,7 +121,7 @@ export class FlightsService {
   private async fetchFlights(): Promise<void> {
     const limit = 100;
     let offset = 0;
-  
+
     try {
       while (true) {
         const response = await lastValueFrom(
