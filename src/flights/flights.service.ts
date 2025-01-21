@@ -186,7 +186,7 @@ export class FlightsService {
   }
 
   private async fetchFlights(): Promise<void> {
-    const limit = 100;
+    const limit = 500;
     let offset = 0;
 
     try {
