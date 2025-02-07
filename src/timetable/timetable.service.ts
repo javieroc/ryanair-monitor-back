@@ -28,7 +28,7 @@ export interface Pagination {
 export class TimetableService {
   private readonly logger = new Logger(TimetableService.name);
   private readonly apiUrl = 'https://api.aviationstack.com/v1/timetable';
-  private readonly accessKey = '70270f49cd2f7ec7cf10dfe0175df6a5';
+  private readonly accessKey = process.env.AVIATIONSTACK_ACCESS_KEY;
   private readonly iataCode = 'DUB';
   private readonly type = 'departure';
   private readonly airline_names = ['Ryanair', 'Aer Lingus'];
