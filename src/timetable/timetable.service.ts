@@ -74,11 +74,11 @@ export class TimetableService {
   async findAll({
     limit,
     offset,
-    timetable_date,
+    flightDate,
   }: QueryParamsDto): Promise<FindAllResponse<Timetable>> {
     const matchCondition: any = {};
     matchCondition.timetable_date =
-      timetable_date ?? format(new Date(), 'yyyy-MM-dd');
+      flightDate ?? format(new Date(), 'yyyy-MM-dd');
 
     const total = await this.timetableModel
       .countDocuments(matchCondition)
@@ -108,10 +108,10 @@ export class TimetableService {
     };
   }
 
-  async getStats({ timetable_date }: QueryStatsDto): Promise<StatsResponseDto> {
+  async getStats({ flightDate }: QueryStatsDto): Promise<StatsResponseDto> {
     const matchCondition: any = {};
     matchCondition.timetable_date =
-      timetable_date ?? format(new Date(), 'yyyy-MM-dd');
+      flightDate ?? format(new Date(), 'yyyy-MM-dd');
 
     try {
       const flightsTotal = await this.timetableModel
@@ -166,12 +166,12 @@ export class TimetableService {
   }
 
   async getFlightWithHighestDelay({
-    timetable_date,
+    flightDate,
   }: QueryStatsDto): Promise<Timetable> {
     try {
       const flightWithHighestDelay = await this.timetableModel
         .findOne({
-          timetable_date: timetable_date ?? format(new Date(), 'yyyy-MM-dd'),
+          timetable_date: flightDate ?? format(new Date(), 'yyyy-MM-dd'),
         })
         .sort({ 'departure.delay': -1 })
         .exec();
@@ -184,15 +184,14 @@ export class TimetableService {
   }
 
   async getAverageDelay({
-    timetable_date,
+    flightDate,
   }: QueryStatsDto): Promise<{ averageDelay: number }> {
     try {
       const result = await this.timetableModel
         .aggregate([
           {
             $match: {
-              timetable_date:
-                timetable_date ?? format(new Date(), 'yyyy-MM-dd'),
+              timetable_date: flightDate ?? format(new Date(), 'yyyy-MM-dd'),
             },
           },
           {
