@@ -1,0 +1,15 @@
+name: Run Scheduled Task
+
+on:
+  schedule:
+    - cron: "*/10 * * * *" # Runs every 10 minutes
+  workflow_dispatch: # Allows manual trigger from GitHub
+
+jobs:
+  run-task:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Call API to Trigger Task
+        run: |
+          curl -X GET "https://ryanair-monitor-back.vercel.app/timetable/run-task?apiKey=${{ secrets.SECRET_KEY }}"

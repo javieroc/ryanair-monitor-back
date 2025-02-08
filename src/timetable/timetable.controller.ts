@@ -1,4 +1,11 @@
-import { Controller, Get, Post, Body, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Query,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { TimetableService } from './timetable.service';
 import { CreateTimetableDto } from './dto/create-timetable.dto';
 import { QueryParamsDto } from './dto/query-params.dto';
@@ -31,5 +38,13 @@ export class TimetableController {
   @Get('average-delay')
   getAverageDelay(@Query() queryParamsDto: QueryStatsDto) {
     return this.timetableService.getAverageDelay(queryParamsDto);
+  }
+
+  @Get('run-task')
+  runTask(@Query('apiKey') key: string) {
+    if (key !== process.env.SECRET_KEY) {
+      throw new UnauthorizedException('Invalid Api key');
+    }
+    return this.timetableService.fetchTimetables();
   }
 }

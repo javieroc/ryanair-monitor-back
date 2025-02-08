@@ -221,7 +221,7 @@ export class TimetableService {
     }
   }
 
-  private async fetchTimetables(): Promise<void> {
+  async fetchTimetables(): Promise<void> {
     try {
       const response = await lastValueFrom(
         this.httpService.get<TimetableResponse>(this.apiUrl, {
