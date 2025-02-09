@@ -211,7 +211,7 @@ export class TimetableService {
     }
   }
 
-  @Cron(CronExpression.EVERY_10_HOURS)
+  @Cron(CronExpression.EVERY_DAY_AT_4AM)
   async updateFlightsData() {
     this.logger.log('Started fetching flight data...');
     try {
