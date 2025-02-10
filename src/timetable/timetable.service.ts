@@ -75,10 +75,12 @@ export class TimetableService {
     limit,
     offset,
     flightDate,
+    airline,
   }: QueryParamsDto): Promise<FindAllResponse<Timetable>> {
     const matchCondition: any = {};
     matchCondition.timetable_date =
       flightDate ?? format(new Date(), 'yyyy-MM-dd');
+    matchCondition['airline.name'] = airline ?? 'Ryanair';
 
     const total = await this.timetableModel
       .countDocuments(matchCondition)
@@ -108,10 +110,14 @@ export class TimetableService {
     };
   }
 
-  async getStats({ flightDate }: QueryStatsDto): Promise<StatsResponseDto> {
+  async getStats({
+    flightDate,
+    airline,
+  }: QueryStatsDto): Promise<StatsResponseDto> {
     const matchCondition: any = {};
     matchCondition.timetable_date =
       flightDate ?? format(new Date(), 'yyyy-MM-dd');
+    matchCondition['airline.name'] = airline ?? 'Ryanair';
 
     try {
       const flightsTotal = await this.timetableModel
@@ -167,11 +173,13 @@ export class TimetableService {
 
   async getFlightWithHighestDelay({
     flightDate,
+    airline,
   }: QueryStatsDto): Promise<Timetable> {
     try {
       const flightWithHighestDelay = await this.timetableModel
         .findOne({
           timetable_date: flightDate ?? format(new Date(), 'yyyy-MM-dd'),
+          'airline.name': airline ?? 'Ryanair',
         })
         .sort({ 'departure.delay': -1 })
         .exec();
@@ -185,6 +193,7 @@ export class TimetableService {
 
   async getAverageDelay({
     flightDate,
+    airline,
   }: QueryStatsDto): Promise<{ averageDelay: number }> {
     try {
       const result = await this.timetableModel
@@ -192,6 +201,7 @@ export class TimetableService {
           {
             $match: {
               timetable_date: flightDate ?? format(new Date(), 'yyyy-MM-dd'),
+              'airline.name': airline ?? 'Ryanair',
             },
           },
           {
@@ -223,20 +233,22 @@ export class TimetableService {
 
   async fetchTimetables(): Promise<void> {
     try {
-      const response = await lastValueFrom(
-        this.httpService.get<TimetableResponse>(this.apiUrl, {
-          params: {
-            access_key: this.accessKey,
-            iataCode: this.iataCode,
-            type: this.type,
-            airline_name: this.airline_names[0],
-          },
-        }),
-      );
+      for (const airline_name of this.airline_names) {
+        const response = await lastValueFrom(
+          this.httpService.get<TimetableResponse>(this.apiUrl, {
+            params: {
+              access_key: this.accessKey,
+              iataCode: this.iataCode,
+              type: this.type,
+              airline_name,
+            },
+          }),
+        );
 
-      const { data } = response.data;
+        const { data } = response.data;
 
-      await this.processTimetablesData(data);
+        await this.processTimetablesData(data);
+      }
     } catch (error) {
       this.logger.error('Error fetching timetables', error.message);
     }
