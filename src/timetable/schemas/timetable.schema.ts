@@ -30,8 +30,8 @@ export class Timetable {
     terminal?: string;
   };
 
-  @Prop({ type: String })
-  codeshared?: string;
+  @Prop({ type: MongooseSchema.Types.Mixed })
+  codeshared?: any;
 
   @Prop({ type: MongooseSchema.Types.Mixed })
   departure: {

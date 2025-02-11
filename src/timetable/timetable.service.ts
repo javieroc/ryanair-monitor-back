@@ -224,31 +224,34 @@ export class TimetableService {
   @Cron(CronExpression.EVERY_DAY_AT_4AM)
   async updateFlightsData() {
     this.logger.log('Started fetching flight data...');
-    try {
-      await this.fetchTimetables();
-    } catch (error) {
-      this.logger.error('Error fetching flight data', error.message);
-    }
+
+    await this.airline_names.reduce(async (prev, airline_name) => {
+      try {
+        await prev;
+        return this.fetchTimetables(airline_name);
+      } catch (error) {
+        this.logger.error(JSON.stringify(error));
+        this.logger.error(`Error fetching data for airline: ${airline_name}`);
+      }
+    }, Promise.resolve() as Promise<void>);
   }
 
-  async fetchTimetables(): Promise<void> {
+  async fetchTimetables(airline_name: string): Promise<void> {
     try {
-      for (const airline_name of this.airline_names) {
-        const response = await lastValueFrom(
-          this.httpService.get<TimetableResponse>(this.apiUrl, {
-            params: {
-              access_key: this.accessKey,
-              iataCode: this.iataCode,
-              type: this.type,
-              airline_name,
-            },
-          }),
-        );
+      const response = await lastValueFrom(
+        this.httpService.get<TimetableResponse>(this.apiUrl, {
+          params: {
+            access_key: this.accessKey,
+            iataCode: this.iataCode,
+            type: this.type,
+            airline_name,
+          },
+        }),
+      );
 
-        const { data } = response.data;
+      const { data } = response.data;
 
-        await this.processTimetablesData(data);
-      }
+      await this.processTimetablesData(data);
     } catch (error) {
       this.logger.error('Error fetching timetables', error.message);
     }

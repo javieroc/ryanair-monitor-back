@@ -45,6 +45,6 @@ export class TimetableController {
     if (key !== process.env.SECRET_KEY) {
       throw new UnauthorizedException('Invalid Api key');
     }
-    return this.timetableService.fetchTimetables();
+    return this.timetableService.updateFlightsData();
   }
 }
