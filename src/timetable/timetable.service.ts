@@ -236,6 +236,28 @@ export class TimetableService {
     }, Promise.resolve() as Promise<void>);
   }
 
+  @Cron(CronExpression.EVERY_DAY_AT_4AM)
+  async updateRyanairFlightsData() {
+    this.logger.log('Started fetching Ryanair flight data...');
+    try {
+      return this.fetchTimetables('Ryanair');
+    } catch (error) {
+      this.logger.error(JSON.stringify(error));
+      this.logger.error('Error fetching data for airline: Ryanair');
+    }
+  }
+
+  @Cron(CronExpression.EVERY_DAY_AT_5PM)
+  async updateAerLingusFlightsData() {
+    this.logger.log('Started fetching Aer Lingus flight data...');
+    try {
+      return this.fetchTimetables('Aer Lingus');
+    } catch (error) {
+      this.logger.error(JSON.stringify(error));
+      this.logger.error('Error fetching data for airline: Aer Lingus');
+    }
+  }
+
   async fetchTimetables(airline_name: string): Promise<void> {
     try {
       const response = await lastValueFrom(

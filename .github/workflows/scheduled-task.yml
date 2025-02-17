@@ -1,15 +1,25 @@
-name: Run Scheduled Task
+name: Run Scheduled Tasks
 
 on:
   schedule:
-    - cron: "0 8 * * *" # Runs every day at 8:00 AM UTC
-  workflow_dispatch: # Allows manual trigger from GitHub
+    - cron: "0 8 * * *"   # Runs task-1 every day at 8:00 AM UTC
+    - cron: "10 8 * * *"  # Runs task-2 every day at 8:10 AM UTC
+  workflow_dispatch:
 
 jobs:
-  run-task:
+  run-task-1:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Call API to Trigger Task
+      - name: Call API to Trigger Task-1
         run: |
-          curl -X GET "https://ryanair-monitor-back.vercel.app/timetable/run-task?apiKey=${{ secrets.SECRET_KEY }}"
+          curl -X GET "https://ryanair-monitor-back.vercel.app/timetable/run-task-1?apiKey=${{ secrets.SECRET_KEY }}"
+
+  run-task-2:
+    runs-on: ubuntu-latest
+    needs: run-task-1
+
+    steps:
+      - name: Call API to Trigger Task-2
+        run: |
+          curl -X GET "https://ryanair-monitor-back.vercel.app/timetable/run-task-2?apiKey=${{ secrets.SECRET_KEY }}"

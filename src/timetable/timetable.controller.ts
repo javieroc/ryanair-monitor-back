@@ -47,4 +47,20 @@ export class TimetableController {
     }
     return this.timetableService.updateFlightsData();
   }
+
+  @Get('run-task-1')
+  runTask1(@Query('apiKey') key: string) {
+    if (key !== process.env.SECRET_KEY) {
+      throw new UnauthorizedException('Invalid Api key');
+    }
+    return this.timetableService.updateRyanairFlightsData();
+  }
+
+  @Get('run-task-2')
+  runTask2(@Query('apiKey') key: string) {
+    if (key !== process.env.SECRET_KEY) {
+      throw new UnauthorizedException('Invalid Api key');
+    }
+    return this.timetableService.updateAerLingusFlightsData();
+  }
 }
